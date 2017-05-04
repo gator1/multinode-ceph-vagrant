@@ -162,9 +162,9 @@ We also should make sure the keyring is readable:
 
 ```console
 vagrant@ceph-admin:~/test-cluster$ sudo chmod +r /etc/ceph/ceph.client.admin.keyring
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-1 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-2 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-3 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+vagrant@ceph-admin:~/test-cluster$ ssh mon-1 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+vagrant@ceph-admin:~/test-cluster$ ssh mon-2 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+vagrant@ceph-admin:~/test-cluster$ ssh mon-3 sudo chmod +r /etc/ceph/ceph.client.admin.keyring
 ```
 
 Finally, check on the health of the cluster:
@@ -181,7 +181,7 @@ HEALTH_OK
 vagrant@ceph-admin:~/test-cluster$ ceph -s
     cluster 18197927-3d77-4064-b9be-bba972b00750
      health HEALTH_OK
-     monmap e2: 3 mons at {ceph-server-1=172.21.12.12:6789/0,ceph-server-2=172.21.12.13:6789/0,ceph-server-3=172.21.12.14:6789/0}, election epoch 6, quorum 0,1,2 ceph-server-1,ceph-server-2,ceph-server-3
+     monmap e2: 3 mons at {mon-1=172.21.12.12:6789/0,mon-2=172.21.12.13:6789/0,mon-3=172.21.12.14:6789/0}, election epoch 6, quorum 0,1,2 mon-1,mon-2,mon-3
      osdmap e9: 2 osds: 2 up, 2 in
       pgmap v13: 192 pgs, 3 pools, 0 bytes data, 0 objects
             12485 MB used, 64692 MB / 80568 MB avail
@@ -198,13 +198,13 @@ To more closely model a production cluster, we're going to add one more OSD daem
 
 ### Add an OSD
 ```console
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-1 "sudo mkdir /var/local/osd2 && sudo chown ceph:ceph /var/local/osd2"
+vagrant@ceph-admin:~/test-cluster$ ssh osd-3 "sudo mkdir /var/local/osd2 && sudo chown ceph:ceph /var/local/osd2"
 ```
 
 Now, from the admin node, we prepare and activate the OSD:
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd prepare ceph-server-1:/var/local/osd2
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd activate ceph-server-1:/var/local/osd2
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd prepare osd-3:/var/local/osd2
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd activate osd-3:/var/local/osd2
 ```
 
 Watch the rebalancing:
@@ -219,7 +219,7 @@ You should eventually see it return to an `active+clean` state, but this time wi
 vagrant@ceph-admin:~/test-cluster$ ceph -w
     cluster 18197927-3d77-4064-b9be-bba972b00750
      health HEALTH_OK
-     monmap e2: 3 mons at {ceph-server-1=172.21.12.12:6789/0,ceph-server-2=172.21.12.13:6789/0,ceph-server-3=172.21.12.14:6789/0}, election epoch 30, quorum 0,1,2 ceph-server-1,ceph-server-2,ceph-server-3
+     monmap e2: 3 mons at {mon-1=172.21.12.12:6789/0,ceph-server-2=172.21.12.13:6789/0,ceph-server-3=172.21.12.14:6789/0}, election epoch 30, quorum 0,1,2 mon-1,mon-2,mon-3
      osdmap e38: 3 osds: 3 up, 3 in
       pgmap v415: 192 pgs, 3 pools, 0 bytes data, 0 objects
             18752 MB used, 97014 MB / 118 GB avail
@@ -231,7 +231,7 @@ vagrant@ceph-admin:~/test-cluster$ ceph -w
 Let's add a metadata server to server1:
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy mds create ceph-server-1
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy mds create mon-1
 ```
 
 ## Add more monitors
