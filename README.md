@@ -46,6 +46,8 @@ On \*nix:
 $ ssh-add -k ~/.vagrant.d/insecure_private_key
 ```
 
+no agent for jepsen, gator   
+
 ## Start the VMs
 
 This instructs Vagrant to start the VMs and install `ceph-deploy` on the admin machine.
@@ -73,10 +75,10 @@ vagrant@ceph-admin:~$ mkdir test-cluster && cd test-cluster
 Let's prepare the machines:
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy new ceph-server-1 ceph-server-2 ceph-server-3
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy new mon-1 mon-2 mon-3
 ```
 
-Now, we have to change a default setting. For our initial cluster, we are only going to have two [object storage daemons](http://ceph.com/docs/master/man/8/ceph-osd/). We need to tell Ceph to allow us to achieve an `active + clean` state with just two Ceph OSDs. Add `osd pool default size = 2` to `./ceph.conf`.
+Now, we have to change a default setting. For our initial cluster, we are only going to have two [object storage daemons](http://ceph.com/docs/master/man/8/ceph-osd/). We need to tell Ceph to allow us to achieve an `active + clean` state with just three Ceph OSDs. Add `osd pool default size = 3` to `./ceph.conf`.
 
 Because we're dealing with multiple VMs sharing the same host, we can expect to see more clock skew. We can tell Ceph that we'd like to tolerate slightly more clock skew by adding the following section to `ceph.conf`:
 ```
@@ -102,7 +104,7 @@ mon_host = 172.21.12.12,172.21.12.13,172.21.12.14
 auth_cluster_required = cephx
 auth_service_required = cephx
 auth_client_required = cephx
-osd pool default size = 2
+osd pool default size = 3
 mon_clock_drift_allowed = 1
 osd max object name len = 256
 osd max object namespace len = 64
@@ -115,7 +117,7 @@ We're finally ready to install!
 Note here that we specify the Ceph release we'd like to install, which is [kraken](http://docs.ceph.com/docs/master/release-notes/#v11-2-0-kraken).
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy install --release=kraken ceph-admin ceph-server-1 ceph-server-2 ceph-server-3 ceph-client
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy install --release=kraken ceph-admin mon-1 mon-2 mon-3 osd-1 osd-2 osd-3 ceph-client
 ```
 
 ## Configure monitor and OSD services
@@ -129,18 +131,19 @@ vagrant@ceph-admin:~/test-cluster$ ceph-deploy mon create-initial
 And our two OSDs. For these, we need to log into the server machines directly:
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-2 "sudo mkdir /var/local/osd0 && sudo chown ceph:ceph /var/local/osd0"
+vagrant@ceph-admin:~/test-cluster$ ssh osd-1 "sudo mkdir /var/local/osd0 && sudo chown ceph:ceph /var/local/osd0"
 ```
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ssh ceph-server-3 "sudo mkdir /var/local/osd1 && sudo chown ceph:ceph /var/local/osd1"
+vagrant@ceph-admin:~/test-cluster$ ssh osd-2 "sudo mkdir /var/local/osd1 && sudo chown ceph:ceph /var/local/osd1"
+vagrant@ceph-admin:~/test-cluster$ ssh osd-3 "sudo mkdir /var/local/osd2 && sudo chown ceph:ceph /var/local/osd2"
 ```
 
 Now we can prepare and activate the OSDs:
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd prepare ceph-server-2:/var/local/osd0 ceph-server-3:/var/local/osd1
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd activate ceph-server-2:/var/local/osd0 ceph-server-3:/var/local/osd1
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd prepare osd-1:/var/local/osd0 osd-2:/var/local/osd1 osd-3:/var/local/osd2  
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd activate osd-1:/var/local/osd0 osd-2:/var/local/osd1 osd-3:/var/local/osd2  
 ```
 
 ## Configuration and status
@@ -268,6 +271,32 @@ TODO
 
 TODO
 
+## jespen  
+After rbd is done, do git clone gator1/jepsen.git and has a jepsen directory under /home/vagrant.  
+
+Jepsen needs root access to the osd nodes. Jepsen control node is ceph-client node.   
+This could be done automatically but I did manaully.   
+
+first change the root password (I don't know VM's root password, VMs are ubuntu).  
+for ceph-client, osd-1 .. 3 do:  
+'sudo passwd root' and use 'root' as password.   
+
+from ceph-client: su root to login as root.   
+'ssh-keygen -t rsa -N ""' to generate for root. The files id_rsa and id_ras.pub are generated in /root/.ssh  
+ssh-copy-id root@osd-1  
+ssh-copy-id root@osd-2  
+ssh-copy-id root@osd-3  
+
+from /root/.ssh  
+scp id_rsa root@osd-1:/root/.ssh  
+scp id_rsa root@osd-2:/root/.ssh  
+scp id_rsa root@osd-3:/root/.ssh  
+rm known_hosts   
+ssh-keyscan -t rsa osd-1 >> ~/.ssh/known_hosts  
+ssh-keyscan -t rsa osd-2 >> ~/.ssh/known_hosts  
+ssh-keyscan -t rsa osd-3 >> ~/.ssh/known_hosts  
+
+jepsen seems to hard code for iptables for eth0 but VM uses diff interface names.  
 ## Cleanup
 
 When you're all done, tell Vagrant to destroy the VMs.

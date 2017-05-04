@@ -9,6 +9,11 @@ Vagrant.configure("2") do |config|
   config.hostmanager.enabled = true
   config.cache.scope = :box
 
+  config.cache.synced_folder_opts = {
+   owner: "_apt",
+   group: "_apt"
+   }
+
   # We need one Ceph admin machine to manage the cluster
   config.vm.define "ceph-admin" do |admin|
     admin.vm.hostname = "ceph-admin"
@@ -24,11 +29,19 @@ Vagrant.configure("2") do |config|
     client.vm.network :private_network, ip: "172.21.12.11"
   end
 
-  # We provision three nodes to be Ceph servers
+  # We provision three nodes to be Ceph mon
   (1..3).each do |i|
-    config.vm.define "ceph-server-#{i}" do |config|
-      config.vm.hostname = "ceph-server-#{i}"
+    config.vm.define "mon-#{i}" do |config|
+      config.vm.hostname = "mon-#{i}"
       config.vm.network :private_network, ip: "172.21.12.#{i+11}"
+    end
+  end
+
+  # We provision four nodes to be Ceph osd
+  (1..3).each do |i|
+    config.vm.define "osd-#{i}" do |config|
+      config.vm.hostname = "osd-#{i}"
+      config.vm.network :private_network, ip: "172.21.12.#{i+15}"
     end
   end
 end
