@@ -213,14 +213,14 @@ Watch the rebalancing:
 vagrant@ceph-admin:~/test-cluster$ ceph -w
 ```
 
-You should eventually see it return to an `active+clean` state, but this time with 3 OSDs:
+You should eventually see it return to an `active+clean` state, but this time with 4 OSDs:
 
 ```console
 vagrant@ceph-admin:~/test-cluster$ ceph -w
     cluster 18197927-3d77-4064-b9be-bba972b00750
      health HEALTH_OK
      monmap e2: 3 mons at {mon-1=172.21.12.12:6789/0,ceph-server-2=172.21.12.13:6789/0,ceph-server-3=172.21.12.14:6789/0}, election epoch 30, quorum 0,1,2 mon-1,mon-2,mon-3
-     osdmap e38: 3 osds: 3 up, 3 in
+     osdmap e38: 4 osds: 4 up, 4 in
       pgmap v415: 192 pgs, 3 pools, 0 bytes data, 0 objects
             18752 MB used, 97014 MB / 118 GB avail
                  192 active+clean
