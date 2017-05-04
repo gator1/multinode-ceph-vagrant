@@ -260,11 +260,11 @@ Now that we have everything set up, let's actually use the cluster. We'll use th
 
 ```console
 $ vagrant ssh ceph-client
-vagrant@ceph-client:~$ sudo rbd create foo --size 4096 -m ceph-server-1
-vagrant@ceph-client:~$ sudo rbd map foo --pool rbd --name client.admin -m ceph-server-1
+vagrant@ceph-client:~$ sudo rbd create foo --size 4096 -m mon-1 --image-feature layering   
+vagrant@ceph-client:~$ sudo rbd map foo --pool rbd --name client.admin -m mon-1
 vagrant@ceph-client:~$ sudo mkfs.ext4 -m0 /dev/rbd/rbd/foo
-vagrant@ceph-client:~$ sudo mkdir /mnt/ceph-block-device
-vagrant@ceph-client:~$ sudo mount /dev/rbd/rbd/foo /mnt/ceph-block-device
+vagrant@ceph-client:~$ sudo mkdir /mnt/ceph-block-foo
+vagrant@ceph-client:~$ sudo mount /dev/rbd/rbd/foo /mnt/ceph-block-foo
 ```
 
 ### Create a mount with Ceph FS
