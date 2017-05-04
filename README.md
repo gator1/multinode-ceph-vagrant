@@ -1,6 +1,7 @@
 # Multinode Ceph on Vagrant
 
-This workshop walks users through setting up a 3-node [Ceph](http://ceph.com) cluster and mounting a block device, using a CephFS mount, and storing a blob oject.
+This workshop walks users through setting up an 8-node [Ceph](http://ceph.com) cluster and mounting a block device, using a CephFS mount, and storing a blob object.
+Jepsen test is conducted for ceph on the three osd nodes, osd-1 .. 3
 
 It follows the following Ceph user guides:
 
@@ -26,6 +27,9 @@ I'm not sure what this means, but everything seems to have completed successfull
 Install [Vagrant](http://www.vagrantup.com/downloads.html) and a provider such as [VirtualBox](https://www.virtualbox.org/wiki/Downloads).
 
 We'll also need the [vagrant-cachier](https://github.com/fgrehm/vagrant-cachier) and [vagrant-hostmanager](https://github.com/smdahlen/vagrant-hostmanager) plugins:
+
+the VM has trouble with apt-get, user _apt etc. Change the Vagrantfile to change. From  
+https://github.com/fgrehm/vagrant-cachier/issues/175  
 
 ```console
 $ vagrant plugin install vagrant-cachier
@@ -78,7 +82,7 @@ Let's prepare the machines:
 vagrant@ceph-admin:~/test-cluster$ ceph-deploy new mon-1 mon-2 mon-3
 ```
 
-Now, we have to change a default setting. For our initial cluster, we are only going to have two [object storage daemons](http://ceph.com/docs/master/man/8/ceph-osd/). We need to tell Ceph to allow us to achieve an `active + clean` state with just three Ceph OSDs. Add `osd pool default size = 3` to `./ceph.conf`.
+Now, we have to change a default setting. For our initial cluster, we are only going to have three [object storage daemons](http://ceph.com/docs/master/man/8/ceph-osd/). We need to tell Ceph to allow us to achieve an `active + clean` state with just three Ceph OSDs. Add `osd pool default size = 3` to `./ceph.conf`.
 
 Because we're dealing with multiple VMs sharing the same host, we can expect to see more clock skew. We can tell Ceph that we'd like to tolerate slightly more clock skew by adding the following section to `ceph.conf`:
 ```
@@ -99,7 +103,7 @@ After these few changes, the file should look similar to:
 ```
 [global]
 fsid = 7acac25d-2bd8-4911-807e-e35377e741bf
-mon_initial_members = ceph-server-1, ceph-server-2, ceph-server-3
+mon_initial_members = mon-1, mon-2, mon-3
 mon_host = 172.21.12.12,172.21.12.13,172.21.12.14
 auth_cluster_required = cephx
 auth_service_required = cephx
@@ -151,7 +155,7 @@ vagrant@ceph-admin:~/test-cluster$ ceph-deploy osd activate osd-1:/var/local/osd
 We can copy our config file and admin key to all the nodes, so each one can use the `ceph` CLI.
 
 ```console
-vagrant@ceph-admin:~/test-cluster$ ceph-deploy admin ceph-admin ceph-server-1 ceph-server-2 ceph-server-3 ceph-client
+vagrant@ceph-admin:~/test-cluster$ ceph-deploy admin ceph-admin mon-1 mon-2 mon-3 osd-1 osd-2 osd-3 ceph-client
 ```
 
 We also should make sure the keyring is readable:
@@ -184,7 +188,7 @@ vagrant@ceph-admin:~/test-cluster$ ceph -s
                  192 active+clean
 ```
 
-Notice that we have two OSDs (`osdmap e9: 2 osds: 2 up, 2 in`) and all of the [placement groups](http://ceph.com/docs/master/rados/operations/pg-states/) (pgs) are reporting as `active+clean`.
+Notice that we have three OSDs (`osdmap e9: 3 osds: 3 up, 3 in`) and all of the [placement groups](http://ceph.com/docs/master/rados/operations/pg-states/) (pgs) are reporting as `active+clean`.
 
 Congratulations!
 
@@ -280,6 +284,10 @@ This could be done automatically but I did manaully.
 first change the root password (I don't know VM's root password, VMs are ubuntu).  
 for ceph-client, osd-1 .. 3 do:  
 'sudo passwd root' and use 'root' as password.   
+also need to enable root ssh access:  
+modify /etc/ssh/sshd_config for PermitRootLogin=yes  
+sudo systemctl restart sshd.service  
+
 
 from ceph-client: su root to login as root.   
 'ssh-keygen -t rsa -N ""' to generate for root. The files id_rsa and id_ras.pub are generated in /root/.ssh  
